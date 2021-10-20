@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="org.srm.source.rfx.infra.mapper.HitachiRfxQuotationHeaderMapper">
+    <!-- 可根据自己的需求，是否要使用 -->
+    <resultMap id="BaseResultMap" type="org.srm.source.rfx.domain.entity.RfxQuotationHeader">
+        <result column="quotation_header_id" property="quotationHeaderId" jdbcType="DECIMAL"/>
+        <result column="tenant_id" property="tenantId" jdbcType="DECIMAL"/>
+        <result column="rfx_header_id" property="rfxHeaderId" jdbcType="DECIMAL"/>
+        <result column="quotation_num" property="quotationNum" jdbcType="VARCHAR"/>
+        <result column="round_number" property="roundNumber" jdbcType="DECIMAL"/>
+        <result column="quotation_status" property="quotationStatus" jdbcType="VARCHAR"/>
+        <result column="supplier_tenant_id" property="supplierTenantId" jdbcType="DECIMAL"/>
+        <result column="supplier_company_id" property="supplierCompanyId" jdbcType="DECIMAL"/>
+        <result column="supplier_company_name" property="supplierCompanyName" jdbcType="VARCHAR"/>
+        <result column="tax_included_flag" property="taxIncludedFlag" jdbcType="DECIMAL"/>
+        <result column="tax_id" property="taxId" jdbcType="DECIMAL"/>
+        <result column="tax_rate" property="taxRate" jdbcType="DECIMAL"/>
+        <result column="currency_id" property="currencyId" jdbcType="DECIMAL"/>
+        <result column="currency_code" property="currencyCode" jdbcType="VARCHAR"/>
+        <result column="exchange_rate_id" property="exchangeRateId" jdbcType="DECIMAL"/>
+        <result column="exchange_rate_type" property="exchangeRateType" jdbcType="VARCHAR"/>
+        <result column="exchange_rate_date" property="exchangeRateDate" jdbcType="DATE"/>
+        <result column="exchange_rate_period" property="exchangeRatePeriod" jdbcType="VARCHAR"/>
+        <result column="quotation_remark" property="quotationRemark" jdbcType="VARCHAR"/>
+        <result column="business_attachment_uuid" property="businessAttachmentUuid" jdbcType="VARCHAR"/>
+        <result column="tech_attachment_uuid" property="techAttachmentUuid" jdbcType="VARCHAR"/>
+        <result column="submit_attachment_flag" property="submitAttachmentFlag" jdbcType="DECIMAL"/>
+        <result column="object_version_number" property="objectVersionNumber" jdbcType="DECIMAL"/>
+        <result column="creation_date" property="creationDate" jdbcType="DATE"/>
+        <result column="created_by" property="createdBy" jdbcType="DECIMAL"/>
+        <result column="last_updated_by" property="lastUpdatedBy" jdbcType="DECIMAL"/>
+        <result column="last_update_date" property="lastUpdateDate" jdbcType="DATE"/>
+    </resultMap>
+
+    <resultMap id="QuotationHeaderSummaryMap" type="org.srm.source.rfx.domain.entity.RfxQuotationHeader">
+        <result column="quotation_header_id" property="quotationHeaderId" jdbcType="DECIMAL"/>
+        <result column="supplier_company_id" property="supplierCompanyId" jdbcType="DECIMAL"/>
+        <collection property="rfxQuotationLines" ofType="org.srm.source.rfx.domain.entity.RfxQuotationLine" >
+            <result column="quotation_line_id" property="quotationLineId" jdbcType="DECIMAL"/>
+            <result column="valid_quotation_price" property="validQuotationPrice" jdbcType="DECIMAL"/>
+            <result column="allotted_quantity" property="allottedQuantity" jdbcType="DECIMAL"/>
+        </collection>
+    </resultMap>
+    <sql id="Base_Column_List">
+        srqh.quotation_header_id,
+	    srqh.tenant_id,
+	    srqh.rfx_header_id,
+	    srqh.quotation_num,
+	    srqh.round_number,
+	    srqh.quotation_status,
+	    srqh.supplier_tenant_id,
+	    srqh.supplier_company_id,
+	    srqh.supplier_company_name,
+	    srqh.tax_included_flag,
+	    srqh.tax_id,
+	    srqh.tax_rate,
+	    srqh.currency_code,
+	    srqh.exchange_rate_id,
+	    srqh.exchange_rate_type,
+	    srqh.exchange_rate_date,
+	    srqh.exchange_rate_period,
+	    srqh.quotation_remark,
+	    srqh.object_version_number,
+	    srqh.creation_date,
+	    srqh.created_by,
+	    srqh.last_updated_by,
+	    srqh.last_update_date,
+	    srqh.business_attachment_uuid,
+	    srqh.tech_attachment_uuid,
+	    srqh.entry_method,
+	    srqh.submit_attachment_flag,
+	    srqh.rfx_line_supplier_id,
+	    srqh.supplier_company_ip,
+	    srqh.on_line_flag,
+	    srqh.bargain_flag,
+	    srqh.bargain_end_date,
+	    srqh.exchange_rate,
+	    srqh.pre_approve_status,
+	    srqh.pre_remark,
+	    srqh.payment_type_id,
+	    srqh.payment_term_id,
+	    srqh.sign_in_flag
+    </sql>
+    <select id="selectQuotationHeaderByRfxQuotationHeaderId"
+            resultType="org.srm.source.rfx.api.dto.RfxQuotationHeaderDTO">
+        <bind name="lang" value="@io.choerodon.mybatis.helper.LanguageHelper@language()"/>
+        <bind name="userDetails" value="@io.choerodon.core.oauth.DetailsHelper@getUserDetails()"/>
+        SELECT srqh.rfx_header_id,
+        srh.tenant_id,
+        srh.business_attachment_uuid AS rfx_business_attachment_uuid,
+        srh.tech_attachment_uuid AS rfx_tech_attachment_uuid,
+        srqh.quotation_header_id,
+        srh.exchange_rate_type,
+        srh.source_category,
+        sst.continuous_quotation_flag,
+        sst.tax_change_flag,
+        sst.valid_date_input_type,
+        srh.quotation_scope,
+        srh.rfx_num,
+        srh.rfx_title,
+        srh.company_name,
+        srh.company_id,
+        srqh.currency_code,
+        srqh.round_business_attachment_uuid,
+        srqh.bargain_business_attachment_uuid,
+        srqh.round_tech_attachment_uuid,
+        srqh.bargain_tech_attachment_uuid,
+        srqh.exchange_rate,
+        srh.quotation_end_date,
+        srh.latest_quotation_end_date,
+        srh.bargain_status,
+        srh.bargain_end_date,
+        srh.auction_direction,
+        srh.sealed_quotation_flag,
+        srh.source_type,
+        srh.source_from,
+        srh.only_allow_all_win_bids,
+        srh.multi_currency_flag,
+        srh.payment_term_flag,
+        srh.quotation_rounds,
+        (case when  ssttl.template_name is null  then sst.template_name else  ssttl.template_name end)  AS template_name,
+        sst.source_category,
+        sst.diy_ladder_quotation_flag,
+        sst.freight_updatable_flag,
+        sst.round_quotation_rule,
+        sst.round_quotation_rank_flag,
+        sst.bid_bond_flag,
+        sst.detail_price_control_rule,
+        srh.quotation_change,
+        srqh.quotation_status,
+        srqh.object_version_number,
+        srh.bid_bond,
+        srh.template_id,
+        srh.rfx_remark,
+        srh.payment_clause,
+        concat((SELECT COUNT(quotation_line_id)
+        FROM ssrc_rfx_quotation_line parent_s
+        WHERE parent_s.quotation_header_id = srqh.quotation_header_id
+        AND parent_s.quotation_line_status IN ('SUBMITTED',
+        'BARGAINED')),
+        concat('/',
+        (SELECT COUNT(quotation_line_id)
+        FROM ssrc_rfx_quotation_line parent_l
+        WHERE parent_l.quotation_header_id = srqh.quotation_header_id))) AS quotation_line_number,
+        (SELECT SUM(CASE
+        WHEN srql.total_amount THEN
+        srql.total_amount
+        ELSE
+        0
+        END)
+        FROM ssrc_rfx_quotation_line srql
+        WHERE srql.quotation_header_id = srqh.quotation_header_id) quotation_total_amount,
+        srqh.quotation_remark,
+        sst.price_category,
+        (case when (smpttl.type_name is null) then  smpt.type_name else  smpttl.type_name end ) AS payment_type_name,
+        (case when (spttl.term_name is null) then  spt.term_name else  spttl.term_name end) AS payment_term_name,
+        srqh.payment_type_id,
+        srqh.payment_term_id,
+        srh.round_number,
+        srqh.business_attachment_uuid,
+        srqh.tech_attachment_uuid,
+        sroh.quotation_round_number,
+        sroh.starting_reason,
+        sp.source_project_num,
+        (case when ( sptl.source_project_name is null) then  sp.source_project_name else sptl.source_project_name end) AS source_project_name,
+        spls.section_code,
+        spls.section_name,
+        sp.subject_matter_rule,
+        srqh.pre_approve_status,
+        srqh.bargain_flag,
+        sst.qualification_type,
+        sst.template_id,
+        srh.project_line_section_id
+        FROM ssrc_rfx_header srh
+        JOIN ssrc_rfx_quotation_header srqh
+        ON srh.rfx_header_id = srqh.rfx_header_id
+        JOIN ssrc_source_template sst   ON srh.template_id = sst.template_id
+        LEFT  JOIN ssrc_source_template_tl ssttl  ON ssttl.template_id = sst.template_id  and ssttl.lang=#{lang}
+        LEFT JOIN smdm_payment_type smpt ON smpt.type_id = srqh.payment_type_id
+        LEFT  JOIN smdm_payment_type_tl smpttl  ON smpttl.type_id = smpt.type_id  and smpttl.lang=#{lang}
+        LEFT JOIN smdm_payment_term spt ON spt.term_id = srqh.payment_term_id
+        LEFT  JOIN smdm_payment_term_tl spttl  ON spttl.term_id = spt.term_id  and spttl.lang=#{lang}
+        LEFT JOIN ssrc_round_header sroh ON sroh.source_header_id = srh.rfx_header_id AND sroh.source_from = 'RFX'
+        LEFT JOIN ssrc_source_project sp on srh.source_project_id = sp.source_project_id
+        LEFT JOIN ssrc_source_project_tl sptl on sptl.source_project_id = sp.source_project_id and sptl.lang=#{lang}
+        left join ssrc_project_line_section spls on spls.project_line_section_id = srh.project_line_section_id
+        WHERE srqh.quotation_header_id = #{rfxQuotationHeaderId}
+        <if test="userDetails.organizationId == userDetails.tenantId">
+            AND srqh.supplier_tenant_id = #{userDetails.organizationId}
+        </if>
+        <if test="userDetails.organizationId != userDetails.tenantId">
+            AND srqh.tenant_id = #{userDetails.tenantId}
+        </if>
+    </select>
+
+</mapper>

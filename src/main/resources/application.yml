@@ -1,0 +1,285 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://192.168.7.147:3306/srm?useUnicode=true&characterEncoding=utf-8&useSSL=false}
+    username: ${SPRING_DATASOURCE_USERNAME:srm}
+    password: ${SPRING_DATASOURCE_PASSWORD:NS#vp733g#tJ6pfX}
+    hikari:
+      #并发情况下最大可从连接池获取连接数
+      #默认100，设置值视系统负载而定
+      # 连接池最小空闲连接数
+      minimum-idle: ${SPRING_DATASOURCE_MINIMUM_IDLE:5}
+      # 连接池允许的最大连接数
+      maximum-pool-size: ${SPRING_DATASOURCE_MAXIMUM_POOL_SIZE:200}
+      # 等待连接池分配连接的最大时长（毫秒）
+      connection-timeout: ${SPRING_DATASOURCE_CONNECTION_TIMEOUT:30000}
+  cloud:
+    consul:
+      enabled: ${SPRING_CLOUD_CONSUL_ENABLE:false}
+    stream:
+      default-binder: rocketmq
+      rocketmq:
+        binder:
+          namesrv-addr: ${ROCKETMQ_NAMESRV_ADDR:192.168.3.213:9876}   #【替换成自己项目上rocketmq namesrv】
+      event-topic: EVENT_MESSAGE_${ENV:DEV}  #【destination 开发环境为EVENT_MESSAGE_DEV,测试环境为EVENT_MESSAGE_UAT】
+      record-event-data: true
+      bindings:
+        input:
+          destination: EVENT_MESSAGE_${ENV:DEV}  #【destination 开发环境为EVENT_MESSAGE_DEV,测试环境为EVENT_MESSAGE_UAT】
+          group: SRM-SOURCE-${ENV:DEV}-ONLINE    #【group 改为自己的服务名】
+  redis:
+    password: ${SPRING_REDIS_PASSWORD:Zyun1234}
+    host: ${SPRING_REDIS_HOST:192.168.3.154}
+    port: ${SPRING_REDIS_PORT:6379}
+    database: ${SPRING_REDIS_DATABASE:1}
+    jedis:
+      pool:
+        # 资源池中最大连接数
+        # 默认8，-1表示无限制；可根据服务并发redis情况及服务端的支持上限调整
+        max-active: ${SPRING_REDIS_POOL_MAX_ACTIVE:50}
+        # 资源池运行最大空闲的连接数
+        # 默认8，-1表示无限制；可根据服务并发redis情况及服务端的支持上限调整，一般建议和max-active保持一致，避免资源伸缩带来的开销
+        max-idle: ${SPRING_REDIS_POOL_MAX_IDLE:50}
+        # 当资源池连接用尽后，调用者的最大等待时间(单位为毫秒)
+        # 默认 -1 表示永不超时，设置5秒
+        max-wait: ${SPRING_REDIS_POOL_MAX_WAIT:5000}
+  servlet:
+    multipart:
+      maxFileSize: 10Mb
+      maxRequestSize: 100Mb
+  profiles:
+    include: template
+
+feign:
+  hystrix:
+    enabled: true
+
+hystrix:
+  threadpool:
+    default:
+      # 长期维持的核心线程数量
+      coreSize: 10
+      # 最大执行线程数
+      maximumSize: 100
+      #队列达到这个值时，线程+1，直到爆满后拒绝
+      maxQueueSize: 20
+      #队列达到这个值时，拒绝执行
+      queueSizeRejectionThreshold: 25
+  command:
+    default:
+      requestLog:
+        enabled: false
+      execution:
+        timeout:
+          enabled: true
+        isolation:
+          thread:
+            timeoutInMilliseconds: ${HYSTRIX_COMMAND_TIMEOUT_IN_MILLISECONDS:180000}
+ribbon:
+  # saga配置
+  eureka:
+    enabled: ${RIBBON_EUREKA_ENABLED:true}
+  ReadTimeout: ${RIBBON_READ_TIMEOUT:180000}
+  ConnectTimeout: ${RIBBON_CONNECT_TIMEOUT:180000}
+
+#saga配置
+alpha:
+  cluster:
+    register:
+      type: ${ALPHA_CLUSTER_REGISTER_TYPE:eureka}  #标识注册中心是eureka
+    address:
+    serviceId: ${ALPHA_CLUSTER_ADDRESS_SERVICEID:srm-saga}  # alpha服务名
+omega:
+  enabled: ${OMEGA_ENABLED:true} #作为omega端，启用标识
+  connection:
+    sending:
+      timeout: ${OMEGA_ENABLED_CONNECTION_SENDING_TIMEOUT:8}
+
+mybatis:
+  mapperLocations:
+    - classpath*:/mapper/*Mapper.xml
+    - classpath*:/mapper/*/*Mapper.xml
+  configuration:
+    default-statement-timeout: ${MYBATIS_DEFAULT_STATEMENT_TIMEOUT:60}
+    mapUnderscoreToCamelCase: true
+
+hoffice:
+  token: ${HOFFICE_TOKEN:LhLEJTCkfa}
+  docServerUrl: ${HOFFICE_DOC_SERVER_URL:http://srmoffice.going-link.com}
+  serverManagerUrl: ${HOFFICE_SERVER_MANAGER_URL:http://srmoffice.going-link.com/document}
+  host: ${HOFFICE_HOST:https://test.isrm.going-link.com}
+
+logging:
+  level:
+    org.apache.ibatis: ${LOG_LEVEL:debug}
+    io.choerodon.asgard: ${LOG_LEVEL:info}
+    io.choerodon: ${LOG_LEVEL:debug}
+    org.srm: ${LOG_LEVEL:debug}
+hzero:
+  resource:
+    pattern: /v1/*,/v2/*
+  lock:
+    pattern: single
+    single-server:
+      address: ${SPRING_REDIS_HOST:192.168.3.154}
+      port: ${SPRING_REDIS_PORT:6379}
+      database: ${SPRING_REDIS_DATABASE:1}
+      password: ${SPRING_REDIS_PASSWORD:Zyun1234}
+  scheduler:
+    executor-code: SRM_SOURCE_EXECUTOR
+    auto-register: true
+    upload-log: false
+  export:
+    enable-async: true
+  data:
+    permission:
+      db-owner: ${HZERO_DB_OWNER:}
+  platform:
+    url: ${PLATFORM_URL:}
+  mybatis-mapper:
+    data-security:
+  # 配置hzero各个服务redis db
+  service:
+    # 注册中心
+    register:
+      redis-db: ${SPRING_REDIS_DATABASE:1}
+    # 网关
+    gateway:
+      redis-db: ${SPRING_REDIS_DATABASE:1}
+    # 配置中心
+    config:
+      redis-db: ${SPRING_REDIS_DATABASE:1}
+    # 认证服务
+    oauth:
+      redis-db: ${SPRING_REDIS_DATABASE:1}
+    # 用户身份服务
+    iam:
+      redis-db: ${SPRING_REDIS_DATABASE:1}
+    # swagger
+    swagger:
+      redis-db: ${SPRING_REDIS_DATABASE:1}
+    # admin
+    admin:
+      redis-db: ${SPRING_REDIS_DATABASE:1}
+    # 平台服务
+    platform:
+      redis-db: ${SPRING_REDIS_DATABASE:1}
+    # 文件服务
+    file:
+      redis-db: ${SPRING_REDIS_DATABASE:1}
+    # 消息服务
+    message:
+      redis-db: ${SPRING_REDIS_DATABASE:1}
+    # 调度服务
+    scheduler:
+      redis-db: ${SPRING_REDIS_DATABASE:1}
+    # 导入服务
+    import:
+      redis-db: ${SPRING_REDIS_DATABASE:1}
+    # 报表服务
+    report:
+      redis-db: ${SPRING_REDIS_DATABASE:1}
+    # 工作流
+    workflow-plus:
+      redis-db: ${SPRING_REDIS_DATABASE:1}
+    # 监控服务
+    monitor:
+      redis-db: ${SPRING_REDIS_DATABASE:1}
+    # 支付
+    pay:
+      redis-db: ${SPRING_REDIS_DATABASE:1}
+  actuator:
+    permission:
+      duplicated-code-check: ${HZERO_ACTUATOR_PERMISSION_DUPLICATEDCODECHECK:false}
+# srm各个服务redisDB
+srm:
+  service:
+    # srm 平台服务
+    platform:
+      redis-db: ${SPRING_REDIS_DATABASE:1}
+    # 供应商服务
+    supplier:
+      redis-db: ${SPRING_REDIS_DATABASE:1}
+    # 接口服务
+    interface:
+      redis-db: ${SPRING_REDIS_DATABASE:1}
+    # 订单服务
+    order:
+      redis-db: ${SPRING_REDIS_DATABASE:1}
+    # 接口配置中心
+    interface-config:
+      redis-db: ${SPRING_REDIS_DATABASE:1}
+    # 商城
+    catalogue:
+      redis-db: ${SPRING_REDIS_DATABASE:1}
+    # 商城接口
+    catalogue-interface:
+      redis-db: ${SPRING_REDIS_DATABASE:1}
+    # 物料
+    mdm:
+      redis-db: ${SPRING_REDIS_DATABASE:1}
+    # 寻源
+    source:
+      redis-db: ${SPRING_REDIS_DATABASE:1}
+    # 接收服务
+    receiver:
+      redis-db: ${SPRING_REDIS_DATABASE:1}
+    # 质量管理
+    quality:
+      redis-db: ${SPRING_REDIS_DATABASE:1}
+    # 采购协议
+    purchase:
+      redis-db: ${SPRING_REDIS_DATABASE:1}
+  mq:
+    # 开启异步消息推送
+    open-async-message-send: true
+    # 环境变量
+    env: ${SRM_MQ_ENV:dev}
+    # topic配置
+    topic-config-ref:
+      sprm_pr_relation_push: SPRM_PR_RELATION_PUSH_${ENV:DEV}_ONLINE
+
+server:
+  undertow:
+    # 设置IO线程数, 它主要执行非阻塞的任务,它们会负责多个连接
+    # 默认值为8，建议设置每个CPU核心一个线程
+    io-threads: 4
+    # 阻塞任务线程池, 当执行类似servlet请求阻塞操作, undertow会从这个线程池中取得线程
+    # 默认等于 io-threads*8，它的值设置取决于系统的负载，可适当调大该值
+    worker-threads: 128
+    # 每块buffer的空间大小，越小空间被利用越充分
+    # 不要设置太大，以免影响其他应用，合适即可
+    buffer-size: 1024
+    # 是否分配的直接内存(NIO直接分配的堆外内存)
+    # 默认false
+    direct-buffers: true
+    # HTTP POST请求最大的大小
+    # 默认0，无限制，可设置10M
+    max-http-post-size: 10485760
+    # 允许url中存在特殊字符
+    allow-unescaped-characters-in-url: true
+
+# 斯睿德配置
+amkt:
+  gateway:
+    url: ${AMKT_GATEWAY_URL:https://gateway.dev.market.going-link.com}
+  oauth:
+    clientId: ${AMKT_OAUTH_CLIENT_ID:g21xWQfQyOII}
+    clientSecret: ${AMKT_OAUTH_CLIENT_SECRET:4iApyLk6n0lWv4aI}
+  schedule:
+    cron: '0 0 0/2 * * ? '  #（根据项目需求配置定时任务执行时间，默认每隔2小时）
+    enabled: true            # (是否开启定时任务，默认为false)
+  feign:
+    name: srm-source  #(配置客户端feign调用的服务名称)
+  client:
+    code: ${AMKT_CLIENT_CODE:DEV_CLIENT}
+    publicKey: ${AMKT_CLIENT_PUBLIC_KEY:MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCLx08UNFU2SRlSNucqRUbYGFykA6ti6nngH7pqu/jxXVrCCfZYqHlIqzD20thC+G4aqIgoZCV/6Eyt3i6pwQ7d3Hf52uQIcxS4bYVw/yWQVsuYJmDFAtLiJJZMeqlc/qYkgGPFq1jhofr0A6YsfXUxbcwnWiTT9cBRp0paa9LqwQIDAQAB}
+    privateKey: ${AMKT_CLIENT_PRIVATE_KEY:MIICdQIBADANBgkqhkiG9w0BAQEFAASCAl8wggJbAgEAAoGBAIvHTxQ0VTZJGVI25ypFRtgYXKQDq2LqeeAfumq7+PFdWsIJ9lioeUirMPbS2EL4bhqoiChkJX/oTK3eLqnBDt3cd/na5AhzFLhthXD/JZBWy5gmYMUC0uIklkx6qVz+piSAY8WrWOGh+vQDpix9dTFtzCdaJNP1wFGnSlpr0urBAgMBAAECgYBuBGbysSosuyZp9nrGY5aaObqZAaZhCcr5pB93KRKM73yi43J5X8lucAfvDg9Xzu/inanlmMWHQlEwPIOf6yuGNse6tYT4IWBtHZHHhbFg3U5esZ16deOl8AkLQ1Oi0Ngk8SyjZQ9K3XPm743r69pcZaRw1gRZ1jvtSbFwrzBAAQJBAOdzePTozd9PJbyKcG8Sif8nEQTyvzkews2UDbbnblSkGSvtqnM+c5IQng66VCB3u63KdJ9lAMA8xTACJKuUnQECQQCamq19Ep7eya9OqpuuGacEWsO/Sb5dhvsgmdHgmi8Ub+I4iY7XPAOa09E47F0pNgQBgKQkLgGtsi6nk8DDT43BAkB5sEujMJe1Vi64D22H6I5neYnIOTzy8kpnvfTr+ogWtmSJpR6eEvK+lEAV7D95BprFiBGDEJ6xdAIU+LuA/tUBAkADlygESZRq9CAgIZIv/uSEE1+MZ7gGEAZxAWGAZ9REEz0btwYcNYaX5+dp/QNE275IEqa9OFxNnl+7AJFvd7+BAkAGSztfaOzAZbxrv8N4wGxYoIeIRAAZohp1z3eK+eE+gQ39ZUHZSZAVggS8X5HEthSKiMNEyxcSLnL2Jg521xqn}
+    protocol: ${AMKT_HTTP_TYPE:https}
+common:
+  file:
+    public-bucket-name: public-bucket
+  url:
+    http-protocol: https
+  hzero:
+    gateway:
+      url: ${HZERO_GATEWAY_URL:https://gateway.dev.isrm.going-link.com}

@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="org.srm.source.rfx.infra.mapper.HitachiRfxHeaderPrintMapper">
+    <select id="rfxPrintListQuery" resultType="org.srm.source.rfx.api.dto.HitachiRfxPrintDTO">
+        <bind name="lang" value="@io.choerodon.mybatis.helper.LanguageHelper@language()"/>
+        <bind name="userDetails" value="@io.choerodon.core.oauth.DetailsHelper@getUserDetails()"/>
+        SELECT
+            concat(srh.rfx_header_id,concat(srli.rfx_line_item_id,srls.rfx_line_supplier_id)) AS unique_key,
+            srh.rfx_header_id,
+            srh.rfx_num,
+            srh.attribute_tinyint1,
+            srh.attribute_datetime1,
+            srli.item_name,
+            srli.rfx_quantity,
+            srli.rfx_line_item_id,
+            concat(
+                    su.uom_code,
+                    concat( '/', CASE WHEN sut.uom_name IS NULL THEN su.uom_name ELSE sut.uom_name END )) AS uom_name,
+            srh.attribute_varchar14,
+            srh.created_by,
+            iu.real_name AS created_by_real_name,
+            hou.attribute1 AS company_code,
+            hou.attribute4 AS divisionCode,
+            hou.attribute5 AS divisionName,
+            hc.company_num AS supplier_company_code,
+            srls.supplier_company_name,
+            (case when ses.supplier_num is null then hc.company_num else ses.supplier_num end) AS sap_supplier_code,
+            srls.attribute_varchar1 AS delivery_address,
+            srls.attribute_varchar2 AS position,
+            srls.attribute_varchar3 AS applicant
+        FROM
+            ssrc_rfx_header srh
+                JOIN hpfm_company hct ON hct.company_id = srh.company_id
+                JOIN iam_user iu ON srh.created_by = iu.id AND srh.tenant_id = iu.organization_id
+                JOIN ssrc_rfx_line_item srli ON srli.rfx_header_id = srh.rfx_header_id AND srli.current_round_number = srh.round_number AND srli.tenant_id = srh.tenant_id
+                JOIN hpfm_operation_unit hou ON hou.ou_id=srli.ou_id
+                LEFT JOIN smdm_uom su ON su.uom_id = srli.uom_id
+                LEFT JOIN smdm_uom_tl sut ON sut.uom_id = su.uom_id AND sut.lang = #{lang}
+                JOIN ssrc_rfx_line_supplier srls ON srls.rfx_header_id = srh.rfx_header_id AND srli.rfx_header_id = srls.rfx_header_id AND srls.tenant_id = srh.tenant_id
+                JOIN hpfm_company hc ON hc.company_id = srls.supplier_company_id
+                LEFT JOIN sslm_external_supplier ses ON ses.link_id = hc.company_id AND ses.tenant_id = srh.tenant_id AND ses.source_code='SAP'
+        WHERE
+        srh.tenant_id = #{tenantId}
+        AND srh.rfx_status NOT IN('NEW','RELEASE_REJECTED','RELEASE_APPROVING','CLOSED','ROUNDED','CANCELED','PAUSED')
+        <if test="rfxNum != null and rfxNum != ''">
+            <bind name="rfxNumLike" value="'%'+rfxNum+'%'"/>
+            and srh.rfx_num like #{rfxNumLike}
+        </if>
+        <if test="supplierCompanyCode != null and supplierCompanyCode != ''">
+            <bind name="supplierCompanyCodeLike" value="'%'+supplierCompanyCode+'%'"/>
+            and hc.company_num like #{supplierCompanyCodeLike}
+        </if>
+        <if test="supplierCompanyName != null and supplierCompanyName != ''">
+            <bind name="supplierCompanyNameLike" value="'%'+supplierCompanyName+'%'"/>
+            and srls.supplier_company_name like #{supplierCompanyNameLike}
+        </if>
+        <if test="itemName != null and itemName != ''">
+            <bind name="itemNameLike" value="'%'+itemName+'%'"/>
+            and srli.item_name like #{itemNameLike}
+        </if>
+        <if test="printCompletedFlag != null and printCompletedFlag == 1">
+            and srh.attribute_tinyint1 = #{printCompletedFlag}
+        </if>
+        <if test="personalFlag != null and personalFlag == 1">
+            and srh.created_by = #{userDetails.userId}
+        </if>
+        <if test="ownDepartmentFlag != null and ownDepartmentFlag == 1">
+            AND EXISTS (
+            SELECT
+            1
+            FROM
+            hpfm_employee_user heu
+            JOIN hpfm_employee_assign hea ON hea.employee_id = heu.employee_id
+            AND hea.enabled_flag = 1
+            AND heu.user_id = #{userDetails.userId}
+            WHERE
+            EXISTS (
+            SELECT
+            1
+            FROM
+            hpfm_employee_user heus
+            JOIN hpfm_employee_assign heas ON heas.employee_id = heus.employee_id
+            AND heas.enabled_flag = 1
+            JOIN hpfm_unit hus ON hus.unit_id = heas.unit_id
+            AND hus.unit_type_code = 'D'
+            AND hus.enabled_flag = 1
+            WHERE
+            hus.unit_id = hea.unit_id
+            AND heus.user_id = srh.created_by
+            AND heus.tenant_id = srh.tenant_id)
+            )
+        </if>
+        order by srh.rfx_num ASC,srli.rfx_line_item_num ASC
+    </select>
+
+    <select id="rfxConsigneeQuery" resultType="org.srm.source.rfx.api.dto.HitachiRfxConsigneeDTO">
+        <bind name="lang" value="@io.choerodon.mybatis.helper.LanguageHelper@language()"/>
+        <bind name="userDetails" value="@io.choerodon.core.oauth.DetailsHelper@getUserDetails()"/>
+        SELECT
+        srh.rfx_header_id,
+        hou.attribute1 AS company_code,
+        hou.attribute4 AS sub_department,
+        hou.attribute5 AS sub_dept_name,
+        ses.supplier_num AS supplier
+        FROM
+        ssrc_rfx_header srh
+        JOIN ssrc_rfx_line_item srli ON srli.rfx_header_id = srh.rfx_header_id AND srli.current_round_number = srh.round_number AND srli.tenant_id = srh.tenant_id
+        JOIN hpfm_operation_unit hou ON hou.ou_id=srli.ou_id
+        JOIN ssrc_rfx_line_supplier srls ON srls.rfx_header_id = srh.rfx_header_id AND srli.rfx_header_id = srls.rfx_header_id AND srls.tenant_id = srh.tenant_id
+        JOIN hpfm_company hc ON hc.company_id = srls.supplier_company_id
+        LEFT JOIN sslm_external_supplier ses ON ses.link_id = hc.company_id AND ses.tenant_id = srh.tenant_id AND ses.source_code='SAP'
+        WHERE
+        srh.tenant_id = #{tenantId}
+        AND srh.rfx_status NOT IN('NEW','RELEASE_REJECTED','RELEASE_APPROVING','CLOSED','ROUNDED','CANCELED','PAUSED')
+        <if test="rfxHeaderId != null">
+            and srh.rfx_header_id=#{rfxHeaderId}
+        </if>
+        order by srh.rfx_num ASC,srli.rfx_line_item_num ASC
+    </select>
+
+    <select id="selectUserOwnDepartment" resultType="org.srm.source.rfx.api.dto.HitachiUnit">
+        <bind name="lang" value="@io.choerodon.mybatis.helper.LanguageHelper@language()"/>
+        SELECT
+            hu.unit_id,
+            hu.unit_code,
+            (case when hut.unit_name is null then hu.unit_name else hut.unit_name end) AS unit_name,
+            hu.tenant_id,
+            hu.parent_unit_id,
+            phu.unit_code AS parent_unit_code,
+            (case when phut.unit_name is null then phu.unit_name else phut.unit_name end) AS parent_unit_name
+        FROM
+            hpfm_employee_user heu
+            JOIN hpfm_employee_assign hea ON hea.employee_id = heu.employee_id
+                AND hea.enabled_flag = 1
+            JOIN hpfm_unit hu ON hu.unit_id = hea.unit_id
+                AND hu.unit_type_code = 'D'
+                AND hu.enabled_flag = 1
+            LEFT JOIN hpfm_unit_tl hut on hut.unit_id = hu.unit_id and hut.lang = #{lang}
+            JOIN hpfm_unit phu ON phu.unit_id = hu.parent_unit_id
+                AND phu.tenant_id = hu.tenant_id
+                AND phu.enabled_flag = 1
+            LEFT JOIN hpfm_unit_tl phut on phut.unit_id = phu.unit_id and phut.lang = #{lang}
+        WHERE
+            heu.user_id = #{userId}
+          AND heu.tenant_id = #{tenantId}
+    </select>
+    <select id="selectUnit" resultType="org.srm.source.rfx.api.dto.HitachiUnit">
+        <bind name="lang" value="@io.choerodon.mybatis.helper.LanguageHelper@language()"/>
+        SELECT
+            hu.unit_id,
+            hu.unit_code,
+            (case when hut.unit_name is null then hu.unit_name else hut.unit_name end) AS unit_name,
+            hu.tenant_id,
+            hu.parent_unit_id
+        FROM
+            hpfm_unit hu
+            LEFT JOIN hpfm_unit_tl hut on hut.unit_id = hu.unit_id and hut.lang = #{lang}
+        WHERE
+            hu.unit_type_code = 'D'
+            AND hu.enabled_flag = 1
+            AND hu.unit_id = #{unitId}
+            AND hu.tenant_id = #{tenantId}
+    </select>
+    <select id="invOrganizationTelQuery" resultType="java.lang.String">
+        SELECT
+            sa.mobile
+        FROM
+            ssrc_rfx_header srh
+                JOIN hpfm_purchase_organization hpo ON hpo.purchase_org_id = srh.pur_organization_id
+                AND srh.tenant_id = hpo.tenant_id
+                JOIN hpfm_inv_organization hio ON hio.organization_code = hpo.organization_code
+                AND srh.tenant_id = hio.tenant_id
+                JOIN smal_address sa ON sa.company_id = srh.company_id
+                AND sa.inv_organization_id = hio.organization_id
+        WHERE
+            srh.rfx_header_id = #{rfxHeaderId}
+            AND srh.tenant_id = #{tenantId}
+    </select>
+    <select id="selectOuTelPhone" resultType="java.lang.String">
+        SELECT attribute6
+        FROM hpfm_operation_unit hou
+        WHERE hou.ou_id = #{ouId}
+          AND hou.tenant_id = #{tenantId}
+    </select>
+    <select id="rfxLineItemPrintQuery" resultType="org.srm.source.rfx.api.dto.HitachiRfxLineItemPrintDTO">
+        <bind name="lang" value="@io.choerodon.mybatis.helper.LanguageHelper@language()"/>
+        SELECT
+            srh.rfx_header_id,
+            srh.rfx_num,
+            srli.item_name,
+            srli.rfx_quantity,
+            concat(
+                    su.uom_code,
+                    concat( '/', CASE WHEN sut.uom_name IS NULL THEN su.uom_name ELSE sut.uom_name END )) AS uom_name,
+            srli.demand_date,
+            srh.rfx_remark,
+            srli.attribute_varchar13 AS inv_telephone,
+            srli.attribute_varchar11 AS receive_address,
+            srli.attribute_varchar12 AS receive_contact_name,
+            srli.model,
+            spr.pr_line_id
+        FROM
+            ssrc_rfx_header srh
+                JOIN ssrc_rfx_line_item srli ON srli.current_round_number = srh.round_number
+                AND srli.rfx_header_id = srh.rfx_header_id
+                LEFT JOIN sprm_pr_line spr ON spr.pr_line_id = srli.pr_line_id
+                LEFT JOIN smdm_uom su ON su.uom_id = srli.uom_id
+                LEFT JOIN smdm_uom_tl sut ON sut.uom_id = su.uom_id and sut.lang = #{lang}
+        WHERE
+            srh.rfx_header_id = #{rfxHeaderId}
+            AND srh.tenant_id = #{tenantId}
+        ORDER BY srli.rfx_line_item_num ASC
+    </select>
+    <select id="selectValidCurrency" resultType="java.lang.String">
+        <bind name="lang" value="@io.choerodon.mybatis.helper.LanguageHelper@language()"/>
+        SELECT
+            (case when sct.currency_name is null then sc.currency_name else sct.currency_name end) AS currency_name
+        FROM
+            smdm_currency sc
+            LEFT JOIN smdm_currency_tl sct on sc.currency_id = sct.currency_id and sct.lang = #{lang}
+        WHERE
+            sc.currency_code = #{currencyCode}
+          AND sc.tenant_id = #{tenantId}
+          AND sc.enabled_flag = 1
+    </select>
+    <select id="selectContactByPrimaryKey" resultType="org.srm.source.rfx.api.dto.HitachiSupplierContactDTO">
+        SELECT
+            ssc.supplier_contact_id,
+            ssc.name,
+            ssc.department,
+            ssc.position
+        FROM
+            sslm_supplier_contact ssc
+        WHERE
+            ssc.supplier_contact_id=#{supplierContactId}
+            AND ssc.enabled_flag=1;
+    </select>
+</mapper>

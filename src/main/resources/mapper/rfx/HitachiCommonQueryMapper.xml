@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="org.srm.source.rfx.infra.mapper.HitachiCommonQueryMapper">
+    <select id="pageAndSortInvOrganizations" resultType="org.srm.source.rfx.api.dto.InvOrganizationDTO">
+        select
+        io.organization_id,
+        io.organization_code,
+        io.organization_name,
+        io.ou_id,
+        ou.ou_name,
+        io.tenant_id,
+        io.enabled_flag,
+        io.source_code,
+        io.external_system_code,
+        hc.company_name,
+        io.object_version_number
+        from hpfm_inv_organization io
+        join hpfm_operation_unit ou on ou.ou_id = io.ou_id
+        LEFT JOIN hpfm_company hc ON ou.company_id = hc.company_id
+        LEFT JOIN spfm_inv_organization sio ON io.organization_id = sio.organization_id
+        where
+        io.tenant_id = #{tenantId}
+        <if test="organizationCode != null and organizationCode!=''">
+            <bind name="organizationCodeLike" value="'%' + organizationCode + '%'"/>
+            and io.organization_code like #{organizationCodeLike}
+        </if>
+        <if test="organizationName != null and organizationName!=''">
+            <bind name="organizationNameLike" value="'%' + organizationName + '%'"/>
+            and io.organization_name like #{organizationNameLike}
+        </if>
+        <if test='ouId != null'>
+            and io.ou_id = #{ouId}
+        </if>
+        <if test='enabledFlag != null'>
+            and io.enabled_flag = #{enabledFlag}
+        </if>
+    </select>
+
+    <select id="getRegionDetailByPath" resultType="java.lang.String">
+        <bind name="lang" value="@io.choerodon.mybatis.helper.LanguageHelper@language()"/>
+        select
+        (case when (srtl.region_name is not null) then srtl.region_name else sr.region_name end) as region_name
+        from smal_region sr
+        left join smal_region_tl srtl on srtl.region_id = sr.region_id and srtl.lang=#{lang}
+        where sr.region_code IN
+        <foreach collection="levelPaths" item="levelPath" open="(" separator="," close=")">
+            #{levelPath}
+        </foreach>
+    </select>
+    <select id="selectInvOrganizations" resultType="org.srm.source.rfx.api.dto.InvOrganizationDTO">
+        select
+        io.organization_id,
+        io.organization_code,
+        io.organization_name,
+        io.ou_id,
+        ou.ou_name,
+        io.tenant_id,
+        io.enabled_flag,
+        io.source_code,
+        io.external_system_code,
+        hc.company_name,
+        io.object_version_number,
+        sio.address,
+        sad.region_id,
+        sad.address as goodAddress,
+        sad.contact_name,
+        sad.mobile,
+        sr.level_path
+        from
+        hpfm_inv_organization io
+        join hpfm_operation_unit ou on ou.ou_id = io.ou_id
+        LEFT JOIN hpfm_company hc ON ou.company_id = hc.company_id
+        LEFT JOIN spfm_inv_organization sio ON io.organization_id = sio.organization_id
+        LEFT JOIN (
+        SELECT
+        addr.inv_organization_id,
+        addr.region_id,
+        addr.address,
+        addr.contact_name,
+        addr.mobile
+        FROM
+        smal_default_address sda
+        LEFT JOIN smal_address addr ON sda.address_id = addr.address_id
+        WHERE
+        sda.tenant_id = #{tenantId}
+        ) sad ON sad.inv_organization_id = io.organization_id
+
+        LEFT JOIN smal_region  sr on sr.region_id = sad.region_id
+        where
+        io.tenant_id = #{tenantId}
+        <if test='companyId != null'>
+            and iu.company_id = #{companyId}
+        </if>
+        <if test='ouId != null'>
+            and io.ou_id = #{ouId}
+        </if>
+        <if test="ouId != null and ouCodeFlag == 1">
+            and io.ou_id in (select u.ou_id from hpfm_operation_unit u where left(u.ou_code,1) =
+            left((select uu.ou_code from hpfm_operation_unit uu where uu.ou_id = #{ouId}),1))
+        </if>
+        <if test="organizationId != null">
+            and io.organization_id = #{organizationId}
+        </if>
+    </select>
+    <select id="selectOperationUnitsGG" resultType="org.srm.source.rfx.api.dto.HitachiOperationUnitDTO">
+        select distinct
+        ou.ou_id,
+        ou.ou_code,
+        ou.ou_name,
+        ou.company_id,
+        hc.company_num company_code,
+        hc.company_name
+        from
+        ssrc_rfx_quotation_line rql
+        join ssrc_rfx_line_item rli on rli.rfx_line_item_id = rql.rfx_line_item_id
+        join sprm_pr_line pr on pr.pr_line_id = rli.pr_line_id
+        join hpfm_employee_user eu on eu.user_id = pr.created_by
+        join hpfm_employee_assign ea on ea.employee_id = eu.employee_id
+        join hpfm_unit u on u.unit_id = ea.unit_id
+        join hpfm_operation_unit ou on ou.ou_code = u.unit_code and ou.tenant_id = rql.tenant_id
+        join hpfm_company hc on hc.company_id = ou.company_id
+        where
+        rql.tenant_id = #{tenantId}
+        and rql.quotation_line_id = #{quotationLineId}
+    </select>
+    <select id="selectOperationUnitsSY" resultType="org.srm.source.rfx.api.dto.HitachiOperationUnitDTO">
+        SELECT
+            ou.ou_id,
+            ou.ou_code,
+            ou.ou_name,
+            ou.company_id,
+            hc.company_num,
+            hc.company_name
+        FROM
+            ssrc_rfx_quotation_line rql
+            JOIN ssrc_rfx_line_item rli ON rli.rfx_line_item_id = rql.rfx_line_item_id
+            JOIN sprm_pr_line pr ON pr.pr_line_id = rli.pr_line_id
+            JOIN hpfm_employee_user eu ON eu.user_id = pr.created_by
+            JOIN hpfm_employee_assign ea ON ea.employee_id = eu.employee_id
+            JOIN hpfm_unit u ON u.unit_id = ea.unit_id
+            JOIN hpfm_operation_unit ou ON ou.company_id = u.company_id
+            join hpfm_company hc on hc.company_id = ou.company_id
+        WHERE
+            (u.unit_code != 'z61490'
+            OR (
+                u.unit_code = 'z61490'
+            AND ou.ou_code = u.unit_code))
+            and rql.tenant_id = #{tenantId}
+            and rql.quotation_line_id = #{quotationLineId}
+    </select>
+    <select id="selectOperationUnitsST" resultType="org.srm.source.rfx.api.dto.HitachiOperationUnitDTO">
+        select distinct
+        ou.ou_id,
+        ou.ou_code,
+        ou.ou_name,
+        ou.company_id,
+        hc.company_num company_code,
+        hc.company_name
+        from
+        ssrc_rfx_header rf
+        join hpfm_employee_user eu on eu.user_id = rf.created_by
+        join hpfm_employee_assign ea on ea.employee_id = eu.employee_id
+        join hpfm_unit u on u.unit_id = ea.unit_id
+        join hpfm_operation_unit ou on ou.ou_code = u.unit_code and ou.tenant_id = rf.tenant_id
+        join hpfm_company hc on hc.company_id = ou.company_id
+        where
+        rf.tenant_id = #{tenantId}
+        and rf.rfx_header_id = #{sourceHeaderId}
+    </select>
+
+    <select id="selectCompanysByIds" resultType="org.srm.source.share.domain.entity.PriceAppScopeLine">
+        select distinct
+        hc.tenant_id,
+        hc.company_id data_id,
+        hc.company_num data_code,
+        hc.company_name date_name
+        from hpfm_company hc
+        where
+        hc.tenant_id = #{tenantId}
+        <if test="companyIds != null and companyIds.size() > 0 ">
+            and hc.company_id in
+            <foreach collection="companyIds" item="companyId" separator="," open="(" close=")">
+                #{companyId}
+            </foreach>
+        </if>
+    </select>
+    <select id="selectOperationUnitsByIds" resultType="org.srm.source.share.domain.entity.PriceAppScopeLine">
+        select distinct
+        ou.tenant_id,
+        ou.ou_id data_id,
+        ou.ou_code data_code,
+        ou.ou_name date_name
+        from hpfm_operation_unit ou
+        where
+        ou.tenant_id = #{tenantId}
+        <if test="ouIds != null and ouIds.size() > 0 ">
+            and ou.ou_id in
+            <foreach collection="ouIds" item="ouId" separator="," open="(" close=")">
+                #{ouId}
+            </foreach>
+        </if>
+    </select>
+    <select id="selectInvOrganizationsByIds" resultType="org.srm.source.share.domain.entity.PriceAppScopeLine">
+        select distinct
+        io.tenant_id,
+        io.organization_id data_id,
+        io.organization_code data_code,
+        io.organization_name data_name
+        from hpfm_inv_organization io
+        where
+        io.tenant_id = #{tenantId}
+        <if test="invOrganizationIds != null and invOrganizationIds.size() > 0 ">
+            and io.organization_id in
+            <foreach collection="invOrganizationIds" item="invOrganizationId" separator="," open="(" close=")">
+                #{invOrganizationId}
+            </foreach>
+        </if>
+    </select>
+    <select id="selectPurOrganizationsByIds" resultType="org.srm.source.share.domain.entity.PriceAppScopeLine">
+        select distinct
+        po.tenant_id,
+        po.purchase_org_id data_id,
+        po.organization_code data_code,
+        po.organization_name data_name
+        from hpfm_purchase_organization po
+        where
+        po.tenant_id = #{tenantId}
+        <if test="purOrganizationIds != null and purOrganizationIds.size() > 0 ">
+            and po.purchase_org_id in
+            <foreach collection="purOrganizationIds" item="purOrganizationId" separator="," open="(" close=")">
+                #{purOrganizationId}
+            </foreach>
+        </if>
+    </select>
+    <select id="selectAllComOuInv" resultType="org.srm.source.rfx.api.dto.HitachiOperationUnitDTO">
+        select distinct
+        io.organization_id,
+        ou.ou_id,
+        hc.company_id
+        from
+        hpfm_inv_organization io
+        join hpfm_operation_unit ou on ou.ou_id = io.ou_id and ou.enabled_flag = 1
+        join hpfm_company hc on hc.company_id = ou.company_id and hc.enabled_flag = 1
+        where
+        hc.tenant_id = #{tenantId}
+        and io.enabled_flag = 1
+        <if test="invOrganizationIds != null and invOrganizationIds.size() > 0 ">
+            and io.organization_id in
+            <foreach collection="invOrganizationIds" item="invOrganizationId" separator="," open="(" close=")">
+                #{invOrganizationId}
+            </foreach>
+        </if>
+
+    </select>
+    <select id="getMallAddressByOrganization" resultType="org.srm.source.rfx.api.dto.HitachiInvOrganizationDTO" parameterType="java.lang.Long">
+        select addr.address_id,
+               addr.inv_organization_id,
+               addr.region_id,
+               addr.address,
+               addr.contact_name,
+               addr.mobile,
+               addr.zip as post_code,
+               addr.full_address as good_address
+        from smal_address addr
+        where addr.inv_organization_id = #{invOrganizationId}
+              and addr.tenant_id = #{tenantId}
+              and addr.enabled_flag = 1
+        order by addr.creation_date asc
+    </select>
+
+    <select id="getLevelPathByRegion" resultType="java.lang.String" parameterType="java.lang.Long">
+        select sr.level_path from smal_region sr where sr.region_id = #{regionId}
+    </select>
+</mapper>

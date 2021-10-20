@@ -1,0 +1,49 @@
+source-header:
+  number: 寻源单单号
+  sourceCategoryMeaning: 寻源类别
+  title: 寻源单标题
+  companyName: 采购方公司名称
+  releasedDate: 发布时间
+  reviewTime: 评审时间
+  prequalRemark: 资格要求
+  membersCount: 成员个数
+  currentDate: 当前日期
+
+pre-summary:
+  supplierCompanyName: 供应商名称
+  preApproveStatusMeaning: 资格审查结果
+  preRemark: 审查说明
+
+supplier-quotation:
+  supplierCompanyName: 供应商名称
+  firstAmount: 首次报价
+  totalAmount: 总金额
+  netAmount: 不含税总金额
+
+score-detail:
+  supplierCompanyName: 供应商名称
+  summaryScoreMeaning: 汇总
+  expertNameScore: 专家分数
+
+score-summary:
+  supplierCompanyName: 供应商名称
+  businessScore: 商务得分
+  technologyScore: 技术得分
+  score: 总分
+  scoreRank: 排名
+  totalAmount: 总金额
+
+recommend-cans:
+  supplierCompanyName: 供应商名称
+  candidateSuggestion: 推荐意见
+
+evaluate-exper:
+  expertId: 专家id
+  expertName: 姓名
+  evaluateLeaderFlagMeaning: 职务
+  teamMeaning: 单位
+
+
+
+
+

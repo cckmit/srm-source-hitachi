@@ -1,0 +1,62 @@
+server:
+  port: 8412
+management:
+  server:
+    port: 8413
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http:
+          server:
+            requests: true
+spring:
+  application:
+    name: srm-source
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  cloud:
+    config:
+      fail-fast: false
+      enabled: ${SPRING_CLOUD_CONFIG_ENABLED:false}
+      uri: ${SPRING_CLOUD_CONFIG_URI:http://192.168.3.154:8010}
+      retry:
+        maxAttempts: 6
+        multiplier: 1.1
+        maxInterval: 2000
+eureka:
+  instance:
+    hostname: srm-source
+    prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP_ADDRESS:true}
+    leaseRenewalIntervalInSeconds: 10
+    leaseExpirationDurationInSeconds: 30
+    metadata-map:
+      VERSION: 1.4.0
+      NODE_GROUP_ID: ${HZERO_NODE_GROUP_ID:0}
+      PRODUCT_CODE: ${HZERO_PRODUCT_CODE:DEFAULT}
+      PRODUCT_VERSION_CODE: ${HZERO_PRODUCT_VERSION_CODE:DEFAULT}
+      PRODUCT_ENV_CODE: ${HZERO_PRODUCT_ENV_CODE:DEFAULT}
+      SERVICE_VERSION_CODE: ${HZERO_SERVICE_VERSION_CODE:DEFAULT}
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_DEFAULT_ZONE:http://192.168.3.154:8000/eureka}
+    registryFetchIntervalSeconds: 10
+    disable-delta: true
+
+apollo:
+  property:
+    order:
+      enable: true
+  bootstrap:
+    enabled: ${APOLLO_BOOTSTRAP_ENABLED:false}
+    namespaces: ${APOLLO_BOOTSTRAP_NAMESPACES:application,MYSQL,ROCKETMQ,REDIS,HZERO,SAGA,SPRING,SRM,BASIC_ENVEMENT}
+    interestedKeys: null
+    interestedKeyPrefixes: null
+    eagerLoad:
+      enabled: ${APOLLO_BOOTSTRAP_EAGERLOAD_ENABLED:false}

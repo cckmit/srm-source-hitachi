@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="org.srm.source.rfx.infra.mapper.HitachiRfxHeaderMapper">
+
+    <select id="selectByQuotationLineIds" resultType="org.srm.source.rfx.domain.entity.RfxQuotationLine">
+        SELECT srh.rfx_header_id,
+               srh.tenant_id,
+               srh.template_id,
+               srh.quotation_start_date,
+               srh.quotation_end_date,
+               srh.company_id,
+               srh.source_category,
+               srqh.currency_code,
+               srli.item_id,
+               srli.item_category_id,
+               srli.uom_id,
+               srli.tax_id,
+               srli.attribute_bigint19,
+               srql.quotation_line_id,
+               srql.quotation_header_id,
+               srql.current_quotation_quantity,
+               srql.attribute_decimal1,
+               srql.attribute_decimal2,
+               srql.attribute_decimal3
+        FROM ssrc_rfx_quotation_line srql
+                 JOIN ssrc_rfx_quotation_header srqh ON srql.quotation_header_id = srqh.quotation_header_id
+                 JOIN ssrc_rfx_line_item srli ON srli.rfx_line_item_id = srql.rfx_line_item_id
+                 JOIN ssrc_rfx_header srh ON srh.rfx_header_id = srli.rfx_header_id
+        WHERE srql.quotation_line_id IN
+        <foreach collection="quotationLineIds" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </select>
+
+    <select id="selectByRfxLineItemIds" resultType="org.srm.source.rfx.api.dto.RfxLineItemDTO">
+        SELECT srh.rfx_header_id,
+        srh.tenant_id,
+        srh.template_id,
+        srh.quotation_start_date,
+        srh.quotation_end_date,
+        srh.company_id,
+        srh.source_category,
+        srh.currency_code,
+        srli.rfx_line_item_id,
+        srli.item_id,
+        srli.item_category_id,
+        srli.uom_id,
+        srli.tax_id,
+        srli.attribute_bigint19
+        FROM ssrc_rfx_line_item srli
+        JOIN ssrc_rfx_header srh ON srh.rfx_header_id = srli.rfx_header_id
+        WHERE srli.rfx_line_item_id IN
+        <foreach collection="rfxLineItemIds" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </select>
+</mapper>

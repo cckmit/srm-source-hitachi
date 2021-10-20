@@ -1,0 +1,157 @@
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+srm-basic-chart:
+  replicaCount: 1
+  virtualEnv: dev
+
+  env:
+    from:
+      - isrm-cm
+    open:
+      #key: value
+      CONSUMER_GROUP: SRM-SOURCE-DEV-DEFAULT
+      SPRM_PR_RELATION_PUSH: SPRM_PR_RELATION_PUSH_${ENV}_ONLINE
+
+
+  volumes:
+  - name: data
+    mount:
+    - path: /data
+      #subPath: hadi/data
+    type: empty
+    #可选项为：empty/pvc(persistentVolumeClaim)/cm(configMap)/secrets/nfs
+    #--------------------仅在type为pvc/configMap/secrets下生效---#
+    #existingName: hello-world-pvc
+    #已存在的pvc/cm/secrets的名字，必须先创建对应资源
+    #----------------------------------------------------------#
+    #--------------------仅在type为configMap/secrets下生效-------#
+    #items:
+    #- key:
+       #path:
+    #----------------------------------------------------------#
+    #--------------------仅在type为nfs下生效---------------------#
+    #server:
+    #path:
+    #----------------------------------------------------------#
+
+  service:
+    enabled: false
+    name:
+    #默认取.Chart.Name,如无特殊需求，请不要配置
+    type: ClusterIP
+    #可选项:ClusterIP[默认值]/LoadBalancer
+    #annotations:
+      #key: values
+    #labels:
+      #key: value
+  workloads:
+    type: Deployment
+    #可选项：Deployment[默认值]/StatefulSet/DaemonSet
+    #annotations:
+      #key: value
+    #labels:
+      #key: value
+    pod:
+      annotations:
+        #key: value
+      labels:
+        #key: value
+      nodeSelector:
+        #key: value
+      antiAffinity:
+        #enabled: true
+        #默认启用
+        #type: soft
+        #可选项：soft[默认值](preferred)/hard(required)
+
+  resources:
+    limits:
+      cpu:
+      #默认1000m
+      memory:
+      #默认4Gi
+    requests:
+      cpu:
+      #默认100m
+      memory:
+      #默认2Gi
+
+  probes:
+  - name: readinessProbe
+    enabled: true
+    type: exec
+    #可选项：exec[默认值]/tcpSocket/httpGet
+    #--------------------仅在type为exec下生效--------------------#
+    command:
+    - /bin/sh
+    - -c
+    - curl -m 3 localhost:8413/actuator/health
+    #----------------------------------------------------------#
+    #--------------------仅在type为tcpSocket/httpGet下生效-------#
+    #port: 8000
+    #path: /
+    #默认取/actuator/health
+    #scheme: HTTP
+    #可选值为HTTP、HTTPS, 默认取HTTP
+    #host:
+    #默认取pod's ip
+    #----------------------------------------------------------#
+    initialDelaySeconds: 180
+    timeoutSeconds: 10
+    periodSeconds: 10
+    successThreshold: 1
+    failureThreshold: 3
+  - name: livenessProbe
+    # 默认取第一个探针的所有值
+    enabled: true
+  - name: startupProbe
+    # 默认取第一个探针的所有值
+    enabled: true
+
+  apm:
+    enabled: false
+    plugins:
+    - name: skywalking
+      image: swr.cn-east-2.myhuaweicloud.com/zhenyun/skywalking:6.6.0
+      enabled: false
+      java_opts: |
+        -javaagent:/Charts/skywalking/skywalking-agent.jar
+        -Dskywalking.agent.service_name=$(PASS_APP_NAME)
+    - name: glowroot
+      image: swr.cn-east-2.myhuaweicloud.com/zhenyun/glowroot:0.13.5
+      enabled: false
+      java_opts: |
+        -javaagent:/Charts/glowroot.jar
+        -Dglowroot.agent.id=$(PASS_APP_NAME)
+        -Dglowroot.agent.rollup.id=$(ENV)
+        -Dglowroot.collector.address=$(GLOWROOT_COLLECTOR_ADDRESS)
+    - name: pinpoint
+      image: swr.cn-east-2.myhuaweicloud.com/zhenyun/pinpoint:1.8.5
+      enabled: true
+      configmap: pinpoint-configmap
+      java_opts: |
+        -javaagent:/Charts/pinpoint/pinpoint-bootstrap-1.8.5.jar
+        -Dpinpoint.applicationName=$(PASS_APP_NAME)
+        -Dpinpoint.agentId=$(PASS_UUID)
+
+  ports:
+    #如无特殊需求，通常无需配置
+    #- containerPort: 8412
+    #容器端口，即workload中的运行端口
+    #servicePort: 8412
+    #service的端口，默认取containerPort
+    #targetPort: 8412
+    #service的目标端口，默认取containerPort
+    #name: http-0
+    #如非特殊需要，推荐不指定name，如需指定请务必按照<protocol>[-<suffix>]的格式指定，<protocol>首选http
+    #默认值为:http-$index
+    #protocol:
+    #默认取TCP
+
+  image:
+    repository: open-registry.going-link.com/operation-srm-hitachi/srm-source-hitachi
+    pull:
+      policy: Always
+      #可选项：IfNotPresent(缓存优先)[默认值]/Always(服务端优先)/Never(永不拉取)
+      secrets:
+      - default-secret
